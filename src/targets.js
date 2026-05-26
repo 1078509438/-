@@ -48,10 +48,8 @@ function buildBotGroup() {
   torso.position.set(0, 1.05, 0);
   torso.castShadow = true;
   g.add(torso);
-  // 碰撞盒：
-  // type: 'head' | 'body' | 'legs'
-  // 对应伤害: 头160 / 胸40 / 腿32
-  hitbox.push({ type: 'body', radius: 0.12, height: 0.55, centerY: 1.05 });
+  // 碰撞盒（稍微放大以确保远距离命中判定，符合 FPS 游戏惯例）
+  hitbox.push({ type: 'body', radius: 0.15, height: 0.58, centerY: 1.05 });
 
   // 胸部护甲
   const chestPlate = box(0.2, 0.16, 0.08, RED_ACCENT);
@@ -87,10 +85,10 @@ function buildBotGroup() {
   head.position.set(0, 1.42, 0);
   head.castShadow = true;
   g.add(head);
-  hitbox.push({ type: 'head', radius: 0.09, centerY: 1.42 });
+  hitbox.push({ type: 'head', radius: 0.12, centerY: 1.42 });
 
   // 腿部碰撞盒（合成一个宽圆柱覆盖双腿）
-  hitbox.push({ type: 'legs', radius: 0.14, height: 0.65, centerY: 0.38 });
+  hitbox.push({ type: 'legs', radius: 0.16, height: 0.68, centerY: 0.38 });
 
   // 头部护甲/面罩
   const facePlate = box(0.085, 0.06, 0.04, RED_ACCENT);
@@ -101,6 +99,32 @@ function buildBotGroup() {
   const indicator = sph(0.015, new THREE.MeshStandardMaterial({ color: '#ff3333', roughness: 0.2, emissive: '#ff0000', emissiveIntensity: 0.8 }));
   indicator.position.set(0, 1.52, 0);
   g.add(indicator);
+
+  // ─── 高亮描边层 ───
+  const outlineMat = new THREE.MeshBasicMaterial({
+    color: '#ff4455',
+    transparent: true,
+    opacity: 0.6,
+    depthTest: true,
+    depthWrite: false,
+    side: THREE.BackSide,
+  });
+
+  const outlineGroup = new THREE.Group();
+  outlineGroup.name = 'outline';
+  outlineGroup.visible = true;
+  g.add(outlineGroup);
+
+  // 为每个主要部件创建描边副本（放大 8%）
+  g.children.forEach(child => {
+    if (child === outlineGroup || !child.isMesh || !child.geometry) return;
+    const outlineMesh = new THREE.Mesh(child.geometry, outlineMat);
+    outlineMesh.position.copy(child.position);
+    outlineMesh.rotation.copy(child.rotation);
+    outlineMesh.scale.copy(child.scale).multiplyScalar(1.08);
+    outlineMesh.userData._isOutline = true;
+    outlineGroup.add(outlineMesh);
+  });
 
   return { group: g, hitbox };
 }

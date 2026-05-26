@@ -246,6 +246,20 @@ export class Player {
     bulletDir.applyAxisAngle(camUp, -spray.x * (Math.PI / 180));
     bulletDir.applyAxisAngle(camRight, spray.y * (Math.PI / 180));
 
+    // ─── 移动开火弹道偏移 ───
+    // 移动速度越快偏移越大，静步/蹲下减小
+    const moveAmount = this.moveDir.length(); // 0~1
+    if (moveAmount > 0.01) {
+      let moveSpreadDeg = 3.5; // 基础移动偏移角度
+      if (this.keys.shift) moveSpreadDeg *= 1.4;     // 跑步更飘
+      if (this.keys.control) moveSpreadDeg *= 0.25;  // 蹲下很稳
+      if (!this.isGrounded) moveSpreadDeg *= 2.0;    // 跳起来最飘
+
+      const spreadRad = moveAmount * moveSpreadDeg * (Math.PI / 180);
+      bulletDir.applyAxisAngle(camRight, (Math.random() - 0.5) * spreadRad * 2);
+      bulletDir.applyAxisAngle(camUp,    (Math.random() - 0.5) * spreadRad * 2);
+    }
+
     const muzzlePos = this.camera.position.clone().add(aimDir.clone().multiplyScalar(0.42)).add(camRight.clone().multiplyScalar(0.24)).add(camUp.clone().multiplyScalar(-0.19));
 
     this.raycaster.set(this.camera.position, bulletDir);
