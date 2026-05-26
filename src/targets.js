@@ -44,12 +44,11 @@ function buildBotGroup() {
   g.add(hip);
 
   // ─── 躯干 ───
-  const torso = cyl(0.12, 0.09, 0.55, BODY_DARK);
-  torso.position.set(0, 1.05, 0);
+  const torso = cyl(0.12, 0.09, 0.52, BODY_DARK);
+  torso.position.set(0, 1.02, 0);
   torso.castShadow = true;
   g.add(torso);
-  // 碰撞盒（稍微放大以确保远距离命中判定，符合 FPS 游戏惯例）
-  hitbox.push({ type: 'body', radius: 0.15, height: 0.58, centerY: 1.05 });
+  hitbox.push({ type: 'body', radius: 0.18, height: 0.55, centerY: 1.02 });
 
   // 胸部护甲
   const chestPlate = box(0.2, 0.16, 0.08, RED_ACCENT);
@@ -75,17 +74,18 @@ function buildBotGroup() {
   rArm.castShadow = true;
   g.add(rArm);
 
-  // ─── 脖子 ───
-  const neck = cyl(0.035, 0.04, 0.06, BODY_LIGHT);
-  neck.position.set(0, 1.34, 0);
+  // ─── 脖子（加粗，作为独立命中区） ───
+  const neck = cyl(0.05, 0.06, 0.08, BODY_LIGHT);
+  neck.position.set(0, 1.32, 0);
   g.add(neck);
+  hitbox.push({ type: 'neck', radius: 0.08, height: 0.1, centerY: 1.32 });
 
   // 头部
   const head = sph(0.09, BODY_DARK);
   head.position.set(0, 1.42, 0);
   head.castShadow = true;
   g.add(head);
-  hitbox.push({ type: 'head', radius: 0.12, centerY: 1.42 });
+  hitbox.push({ type: 'head', radius: 0.14, centerY: 1.42 });
 
   // 腿部碰撞盒（合成一个宽圆柱覆盖双腿）
   hitbox.push({ type: 'legs', radius: 0.16, height: 0.68, centerY: 0.38 });
@@ -99,32 +99,6 @@ function buildBotGroup() {
   const indicator = sph(0.015, new THREE.MeshStandardMaterial({ color: '#ff3333', roughness: 0.2, emissive: '#ff0000', emissiveIntensity: 0.8 }));
   indicator.position.set(0, 1.52, 0);
   g.add(indicator);
-
-  // ─── 高亮描边层 ───
-  const outlineMat = new THREE.MeshBasicMaterial({
-    color: '#ff4455',
-    transparent: true,
-    opacity: 0.6,
-    depthTest: true,
-    depthWrite: false,
-    side: THREE.BackSide,
-  });
-
-  const outlineGroup = new THREE.Group();
-  outlineGroup.name = 'outline';
-  outlineGroup.visible = true;
-  g.add(outlineGroup);
-
-  // 为每个主要部件创建描边副本（放大 8%）
-  g.children.forEach(child => {
-    if (child === outlineGroup || !child.isMesh || !child.geometry) return;
-    const outlineMesh = new THREE.Mesh(child.geometry, outlineMat);
-    outlineMesh.position.copy(child.position);
-    outlineMesh.rotation.copy(child.rotation);
-    outlineMesh.scale.copy(child.scale).multiplyScalar(1.08);
-    outlineMesh.userData._isOutline = true;
-    outlineGroup.add(outlineMesh);
-  });
 
   return { group: g, hitbox };
 }
@@ -199,7 +173,7 @@ export class TargetManager {
 
   /** 对靶子造成伤害，返回 { damage, killed, hitType } */
   damageTarget(target, hitType) {
-    const DAMAGE = { head: 160, body: 40, legs: 32 };
+    const DAMAGE = { head: 160, neck: 60, body: 40, legs: 32 };
     const dmg = DAMAGE[hitType] || 40;
 
     target.userData.hp = Math.max(0, target.userData.hp - dmg);
@@ -298,18 +272,6 @@ export class TargetManager {
         t.rotation.x = Math.min(dt / 0.4, 1) * Math.PI * 0.5;
         t.position.y = -Math.min(dt / 0.4, 1) * 0.4;
         continue;
-      }
-
-      // 受击闪烁
-      if (t.userData.hitFlash > 0) {
-        t.userData.hitFlash -= delta;
-        // 简单闪烁：整体变亮
-        const flash = t.userData.hitFlash > 0 ? 1.5 : 1;
-        t.children.forEach(child => {
-          if (child.material && child.material.emissive && !child.userData?._isIndicator) {
-            child.material.emissiveIntensity = (child.material.emissiveIntensity || 0.3) * flash;
-          }
-        });
       }
 
       // 移动

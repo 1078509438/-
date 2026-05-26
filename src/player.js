@@ -249,7 +249,7 @@ export class Player {
     // ─── 移动开火弹道偏移 ───
     // 移动速度越快偏移越大，静步/蹲下减小
     const moveAmount = this.moveDir.length(); // 0~1
-    if (moveAmount > 0.01) {
+    if (moveAmount > 0.15) {
       let moveSpreadDeg = 3.5; // 基础移动偏移角度
       if (this.keys.shift) moveSpreadDeg *= 1.4;     // 跑步更飘
       if (this.keys.control) moveSpreadDeg *= 0.25;  // 蹲下很稳
@@ -303,7 +303,6 @@ export class Player {
     this.camera.rotation.y += this.shakeRot.y;
 
     this.tracers.update(dt);
-    if (this.weaponModel) this.weaponModel.update(dt);
   }
 
   showBlocker() {
