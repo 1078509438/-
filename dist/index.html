@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>无畏契约 - 靶场训练</title>
+  <script type="module" crossorigin src="./assets/index-Ccm7L3z2.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-CzTAKZTZ.css">
+</head>
+<body>
+  <div id="app">
+    <canvas id="game-canvas"></canvas>
+
+    <!-- 首次启动灵敏度设置引导 -->
+    <div id="sens-setup-overlay" class="hidden">
+      <div id="sens-setup">
+        <div class="sens-setup-header">
+          <img src="" alt="" style="display:none" />
+          <h1>设置你的灵敏度</h1>
+          <p>输入你在无畏契约中的鼠标设置，确保训练与游戏手感一致</p>
+        </div>
+        <div class="sens-setup-body">
+          <div class="setup-card">
+            <div class="setup-row">
+              <label>鼠标 DPI</label>
+              <input type="number" id="setup-dpi-input" value="800" min="100" max="32000" step="50" />
+              <span class="hint">鼠标驱动中查看</span>
+            </div>
+            <div class="setup-row">
+              <label>游戏内灵敏度</label>
+              <input type="number" id="setup-sens-input" value="0.5" min="0.01" max="10" step="0.01" />
+              <span class="hint">Valorant 设置 → 控制 → 灵敏度</span>
+            </div>
+            <div class="setup-row setup-row-alt">
+              <label>或输入 cm/360°</label>
+              <input type="number" id="setup-cm360" placeholder="例如 41.5" step="0.1" />
+              <span class="hint">自动反算灵敏度</span>
+            </div>
+            <div class="setup-preview">
+              <div class="preview-item">
+                <span class="preview-val" id="setup-cm-val">41.6</span>
+                <span class="preview-label">cm / 360°</span>
+              </div>
+              <div class="preview-divider"></div>
+              <div class="preview-item">
+                <span class="preview-val" id="setup-edpi-val">400</span>
+                <span class="preview-label">eDPI</span>
+              </div>
+            </div>
+          </div>
+          <div class="setup-tips">
+            <p>💡 不确定灵敏度？在游戏里用鼠标从左到右滑过整个鼠标垫，估算距离后填入上方"cm/360°"</p>
+            <p>🔄 从其他游戏转过来？</p>
+            <div class="setup-convert-row">
+              <select id="setup-game-select">
+                <option value="">-- 原游戏 --</option>
+              </select>
+              <input type="number" id="setup-game-sens" placeholder="原灵敏度" step="0.01" />
+              <button id="setup-convert-btn" class="btn-xs">转换</button>
+            </div>
+          </div>
+        </div>
+        <button id="confirm-sensitivity">确认并开始训练</button>
+      </div>
+    </div>
+
+    <!-- 鼠标锁定提示 / 点击拦截 -->
+    <div id="blocker">
+      <div id="instructions">
+        <h1>VALORANT 靶场训练</h1>
+        <p id="blocker-action">点击开始，鼠标将被锁定到窗口</p>
+        <p>按 <kbd>ESC</kbd> 打开菜单</p>
+        <p>按 <kbd>[</kbd> <kbd>]</kbd> 实时调整灵敏度</p>
+        <p class="sens-info">当前: <span id="blocker-sens-info">800 DPI / 0.50 sens / 41.6cm</span></p>
+      </div>
+    </div>
+
+    <!-- ESC 菜单 -->
+    <div id="esc-menu" class="hidden">
+      <div class="esc-menu-content">
+        <div class="esc-menu-header">
+          <h1>VALORANT 靶场训练</h1>
+          <p id="esc-sens-info">800 DPI | 0.50 sens | 41.6 cm/360°</p>
+        </div>
+
+        <div class="esc-menu-section">
+          <h3>游戏模式</h3>
+          <div class="esc-mode-grid">
+            <button class="esc-mode-btn" data-mode="elim50">
+              <span class="mode-icon">50</span>
+              <span class="mode-name">消灭 50</span>
+            </button>
+            <button class="esc-mode-btn" data-mode="elim100">
+              <span class="mode-icon">100</span>
+              <span class="mode-name">消灭 100</span>
+            </button>
+            <button class="esc-mode-btn" data-mode="timed30">
+              <span class="mode-icon">30s</span>
+              <span class="mode-name">计时 30秒</span>
+            </button>
+            <button class="esc-mode-btn" data-mode="timed60">
+              <span class="mode-icon">60s</span>
+              <span class="mode-name">计时 60秒</span>
+            </button>
+            <button class="esc-mode-btn" data-mode="flying">
+              <span class="mode-icon">✈</span>
+              <span class="mode-name">浮空靶</span>
+            </button>
+            <button class="esc-mode-btn" data-mode="strafe">
+              <span class="mode-icon">↔</span>
+              <span class="mode-name">移动靶</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="esc-menu-section">
+          <h3>灵敏度转换</h3>
+          <div class="esc-convert-row">
+            <select id="esc-game-select">
+              <option value="">-- 选择原游戏 --</option>
+            </select>
+            <input type="number" id="esc-game-sens" placeholder="灵敏度" step="0.01" />
+            <button id="esc-convert-btn" class="btn-xs">转换</button>
+          </div>
+          <div class="esc-convert-result" id="esc-convert-result"></div>
+          <button id="esc-apply-converted" class="btn-sm hidden">应用到 Valorant</button>
+        </div>
+
+        <div class="esc-menu-section esc-quick-sens">
+          <h3>快速调整灵敏度</h3>
+          <div class="esc-sens-row">
+            <button class="esc-sens-btn" data-delta="-0.1">-0.1</button>
+            <button class="esc-sens-btn" data-delta="-0.05">-0.05</button>
+            <button class="esc-sens-btn" data-delta="-0.01">-0.01</button>
+            <span class="esc-sens-val" id="esc-sens-val">0.50</span>
+            <button class="esc-sens-btn" data-delta="0.01">+0.01</button>
+            <button class="esc-sens-btn" data-delta="0.05">+0.05</button>
+            <button class="esc-sens-btn" data-delta="0.1">+0.1</button>
+          </div>
+          <div class="esc-sens-cm360" id="esc-sens-cm360">= 41.6 cm/360°</div>
+        </div>
+
+        <button id="esc-resume" class="esc-resume-btn">返回游戏</button>
+      </div>
+    </div>
+
+    <!-- HUD -->
+    <div id="hud" class="hidden">
+      <div id="score-panel">
+        <span id="score">0</span>
+        <span class="label">击杀</span>
+      </div>
+      <div id="accuracy-panel">
+        <span id="accuracy">100%</span>
+        <span class="label">命中率</span>
+      </div>
+      <div id="timer-panel">
+        <span id="timer">00:00</span>
+        <span class="label">时间</span>
+      </div>
+      <div id="sens-hud">
+        <div class="sens-hud-row">
+          <span id="sens-hud-val">0.50</span>
+          <span class="label">灵敏度</span>
+        </div>
+        <div class="sens-hud-row">
+          <span id="sens-hud-cm">41.6cm</span>
+          <span class="label">/360°</span>
+        </div>
+      </div>
+      <div id="combo-panel">
+        <span id="combo-text"></span>
+      </div>
+      <div id="hitmarker" class="hidden"></div>
+      <div id="killfeed"></div>
+    </div>
+
+    <!-- 设置面板 -->
+    <div id="settings-panel" class="hidden">
+      <div class="settings-header">
+        <h2>设置</h2>
+        <button id="close-settings">×</button>
+      </div>
+      <div class="settings-content">
+        <div class="setting-group">
+          <h3>鼠标灵敏度</h3>
+          <div class="setting-row">
+            <label>鼠标 DPI</label>
+            <input type="number" id="dpi-input" value="800" min="100" max="32000" step="50" />
+          </div>
+          <div class="setting-row">
+            <label>游戏内灵敏度</label>
+            <input type="number" id="sens-input" value="0.5" min="0.01" max="10" step="0.01" />
+          </div>
+          <div class="setting-row">
+            <label>cm/360°</label>
+            <input type="number" id="cm360-input" value="41.56" min="1" max="200" step="0.01" />
+            <span class="hint-inline">可输入反向计算</span>
+          </div>
+          <div class="setting-row sens-presets">
+            <label>快速预设</label>
+            <div class="preset-btns">
+              <button class="sens-preset" data-dpi="400" data-sens="0.5">400×0.5</button>
+              <button class="sens-preset" data-dpi="800" data-sens="0.35">800×0.35</button>
+              <button class="sens-preset" data-dpi="800" data-sens="0.5">800×0.5</button>
+              <button class="sens-preset" data-dpi="1600" data-sens="0.2">1600×0.2</button>
+            </div>
+          </div>
+          <div class="setting-row">
+            <label>cm/360° <small>(计算)</small></label>
+            <input type="text" id="cm360-display" value="41.56" readonly />
+          </div>
+          <div class="setting-row">
+            <label>eDPI</label>
+            <input type="text" id="edpi-display" value="400" readonly />
+          </div>
+        </div>
+
+        <div class="setting-group">
+          <h3>从其他游戏转换</h3>
+          <p class="setting-desc">选择你常玩的游戏并输入灵敏度，自动转换为 Valorant 等效值</p>
+          <div class="quick-games-label">热门游戏</div>
+          <div id="quick-games" class="quick-games-grid"></div>
+          <div class="setting-row">
+            <label>或选择游戏</label>
+            <select id="game-select">
+              <option value="">-- 选择游戏 --</option>
+            </select>
+          </div>
+          <div class="setting-row">
+            <label>原游戏灵敏度</label>
+            <input type="number" id="game-sens-input" value="1.0" min="0.01" max="100" step="0.01" />
+          </div>
+          <div class="convert-result-row" id="convert-result"></div>
+          <button id="apply-converted" class="btn-sm">应用转换结果</button>
+        </div>
+
+        <div class="setting-group">
+          <h3>画面设置</h3>
+          <div class="setting-row">
+            <label>水平视野 (FOV)</label>
+            <input type="number" id="fov-input" value="103" min="60" max="120" step="1" />
+          </div>
+          <div class="setting-row">
+            <label>画面质量</label>
+            <select id="quality-select">
+              <option value="low">低</option>
+              <option value="medium" selected>中</option>
+              <option value="high">高</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="setting-group">
+          <h3>准星设置</h3>
+          <div class="setting-row">
+            <label>准星颜色</label>
+            <input type="color" id="crosshair-color" value="#00ff00" />
+          </div>
+          <div class="setting-row">
+            <label>准星大小</label>
+            <input type="range" id="crosshair-size" value="4" min="1" max="20" step="1" />
+          </div>
+          <div class="setting-row">
+            <label>准星间隙</label>
+            <input type="range" id="crosshair-gap" value="8" min="0" max="30" step="1" />
+          </div>
+          <div class="setting-row">
+            <label>准星粗细</label>
+            <input type="range" id="crosshair-thickness" value="2" min="1" max="10" step="1" />
+          </div>
+        </div>
+      </div>
+      <button id="apply-settings">应用设置</button>
+    </div>
+
+    <button id="open-settings" class="hidden">⚙</button>
+  </div>
+</body>
+</html>
